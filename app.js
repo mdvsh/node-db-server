@@ -2,8 +2,26 @@ const http = require("http");
 
 const PORT = 4000;
 const origin = `http://localhost:${PORT}`;
-const db = [];
-var dbsize = 0;
+
+class Database {
+  constructor() {
+    this.state = new Map();
+  }
+  setState(key, value) {
+    this.state.set(key, value);
+  }
+  getValue(key) {
+    return this.state.get(key);
+  }
+  hasValue(key) {
+    return this.state.has(key);
+  }
+  getState(len = false) {
+    return len ? this.state.size : this.state;
+  }
+}
+
+const db2 = new Database();
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, origin);
@@ -13,15 +31,8 @@ const server = http.createServer((req, res) => {
   if (req.method === "GET" && url.pathname === "/set" && query.length === 2) {
     if (query[0].length >= 1) {
       let [key, value] = query;
-      let exists = false;
 
-      db.map((kvPair) => {
-        if (key in kvPair) {
-          exists = true;
-        }
-      });
-
-      if (exists) {
+      if (db2.hasValue(key)) {
         // console.log(db);
         res
           .writeHead(200, { "Content-Type": "text/plain" })
@@ -29,16 +40,16 @@ const server = http.createServer((req, res) => {
       } else {
         let record = {};
         record[key] = value;
-        dbsize = db.push(record);
+        db2.setState(key, value);
         // console.log(db);
         res
           .writeHead(200, { "Content-Type": "text/plain" })
           .end(
             `New Entry: ${JSON.stringify(
-              db[db.length - 1],
+              record,
               undefined,
               2
-            )}\n\nCurrent Database Size: ${dbsize}`
+            )}\n\nCurrent Database Size: ${db2.getState((len = true))}`
           );
       }
     } else {
@@ -55,16 +66,15 @@ const server = http.createServer((req, res) => {
   ) {
     if (query[1].length >= 1) {
       let [, key] = query;
-      var foundkvp = {};
-      db.map((kvPair) => {
-        if (key in kvPair) foundkvp = kvPair;
-      });
-      if (Object.keys(foundkvp).length === 0) {
+      let fVal = db2.getValue(key);
+      if (!fVal) {
         res.end(`Value with key [${key}] not found in database.`);
       } else {
+        let record = {};
+        record[key] = fVal;
         res
           .writeHead(200, { "Content-Type": "text/plain" })
-          .end(`Found Entry:\n ${JSON.stringify(foundkvp, undefined, 2)}`);
+          .end(`Found Entry:\n${JSON.stringify(record, undefined, 2)}`);
       }
     } else {
       res.end("key passed should be at least 1 character");
@@ -77,10 +87,10 @@ const server = http.createServer((req, res) => {
       .writeHead(200, { "Content-Type": "text/plain" })
       .end(
         `Current DB State: ${JSON.stringify(
-          db,
+          Object.fromEntries(db2.getState()),
           undefined,
           2
-        )}\n\nCurrent Database Size: ${dbsize}`
+        )}\n\nCurrent Database Size: ${db2.getState((len = true))}`
       );
   }
 
