@@ -1,14 +1,31 @@
 const http = require("http");
+const fs = require("fs");
 
 const PORT = 4000;
 const origin = `http://localhost:${PORT}`;
 
 class Database {
-  constructor() {
-    this.state = new Map();
+  constructor(fname) {
+    let state = new Map();
+    try {
+      let joe = fs.readFileSync("storage.json", {
+        encoding: "utf-8",
+        flag: "r+",
+      });
+      state = new Map(Object.entries(JSON.parse(joe)));
+      console.log("db found, state:", state);
+    } catch (err) {
+      console.log("db not found, new state: ", state);
+      fs.writeFileSync(
+        "storage.json",
+        JSON.stringify(Object.fromEntries(state))
+      );
+    }
+    this.state = state;
   }
   setState(key, value) {
     this.state.set(key, value);
+    return this.updateDb(this.state);
   }
   getValue(key) {
     return this.state.get(key);
@@ -19,9 +36,24 @@ class Database {
   getState(len = false) {
     return len ? this.state.size : this.state;
   }
+  toObj(state) {
+    return Object.fromEntries(state);
+  }
+  updateDb(state) {
+    return fs.writeFile(
+      "storage.json",
+      JSON.stringify(Object.fromEntries(state)),
+      (err) => {
+        if (err) {
+          console.log("couldnt update db");
+        }
+        return true;
+      }
+    );
+  }
 }
 
-const db2 = new Database();
+const db2 = new Database("storage");
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, origin);
