@@ -6,20 +6,18 @@ const origin = `http://localhost:${PORT}`;
 
 class Database {
   constructor(fname) {
+    this.fn = `${fname}.json`;
     let state = new Map();
     try {
-      let joe = fs.readFileSync("storage.json", {
+      let joe = fs.readFileSync(this.fn, {
         encoding: "utf-8",
         flag: "r+",
       });
       state = new Map(Object.entries(JSON.parse(joe)));
-      console.log("db found, state:", state);
+      console.log("\nInitializing from existing DB.\n");
     } catch (err) {
-      console.log("db not found, new state: ", state);
-      fs.writeFileSync(
-        "storage.json",
-        JSON.stringify(Object.fromEntries(state))
-      );
+      console.log("\nNo DB found. Initializing new.\n");
+      fs.writeFileSync(this.fn, JSON.stringify(Object.fromEntries(state)));
     }
     this.state = state;
   }
@@ -36,13 +34,10 @@ class Database {
   getState(len = false) {
     return len ? this.state.size : this.state;
   }
-  toObj(state) {
-    return Object.fromEntries(state);
-  }
   updateDb(state) {
     return fs.writeFile(
-      "storage.json",
-      JSON.stringify(Object.fromEntries(state)),
+      this.fn,
+      JSON.stringify(Object.fromEntries(state), undefined, 2),
       (err) => {
         if (err) {
           console.log("couldnt update db");
